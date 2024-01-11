@@ -1,5 +1,6 @@
 using System;
 using AutoMapper;
+using AutoMapper.Internal;
 using SS.Template.Domain.Model;
 
 namespace SS.Template.Infrastructure
@@ -13,7 +14,8 @@ namespace SS.Template.Infrastructure
                 throw new ArgumentNullException(nameof(cfg));
             }
 
-            cfg.ForAllMaps(AutoIgnorePropertiesInternal);
+            cfg.Internal().ForAllMaps(AutoIgnorePropertiesInternal);
+            
         }
 
         private static void AutoIgnorePropertiesInternal(TypeMap map, IMappingExpression expression)

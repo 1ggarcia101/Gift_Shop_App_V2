@@ -5,11 +5,11 @@ using MediatR;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SS.Template.Application.Commands;
-using SS.Template.Application.Examples.Commands;
-using SS.Template.Application.Examples.Commands.Add;
-using SS.Template.Application.Examples.Queries;
-using SS.Template.Application.Examples.Queries.Get;
-using SS.Template.Application.Examples.Queries.GetPage;
+using SS.Template.Application.Features.Examples;
+using SS.Template.Application.Features.Examples.Commands;
+using SS.Template.Application.Features.Examples.Commands.Add;
+using SS.Template.Application.Features.Examples.Queries.Get;
+using SS.Template.Application.Features.Examples.Queries.GetPage;
 using SS.Template.Application.Queries;
 
 namespace SS.Template.Api.Controllers
@@ -62,16 +62,5 @@ namespace SS.Template.Api.Controllers
             return Ok();
         }
 
-        //[HttpDelete("{id:guid}")]
-        //[ProducesResponseType(StatusCodes.Status200OK)]
-        //[ProducesResponseType(StatusCodes.Status404NotFound)]
-        //public async Task<IActionResult> Delete(Guid id)
-#pragma warning disable S125 // Sections of code should not be commented out
-        //{
-        //    await _mediator.Send(new DeleteExampleCommand(id));
-        //    return Ok();
-        //}
     }
-
-#pragma warning restore S125 // Sections of code should not be commented out
 }

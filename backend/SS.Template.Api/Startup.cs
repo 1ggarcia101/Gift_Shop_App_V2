@@ -2,32 +2,24 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Reflection;
-using System.Threading.Tasks;
-using AutoMapper;
+using System.Security.Cryptography.X509Certificates;
 using FluentValidation;
-using FluentValidation.AspNetCore;
 using MediatR;
 using MediatR.Pipeline;
-using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.IdentityModel.Tokens;
 using Microsoft.Net.Http.Headers;
-using Newtonsoft.Json;
-using SS.Template.Api.Filters;
-using SS.Template.Api.Identity;
+using SS.Artemis.Proxy;
+using SS.Template.Api.ApiKeyAuth;
 using SS.Template.Application.Commands;
-using SS.Template.Application.Examples;
+using SS.Template.Application.Features.Examples;
 using SS.Template.Application.Infrastructure;
 using SS.Template.Core;
 using SS.Template.Core.Persistence;
@@ -57,6 +49,8 @@ namespace SS.Template.Api
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
+                app.UseSwagger();
+                app.UseSwaggerUI();
             }
 
             app.UseCors(builder =>
@@ -64,19 +58,17 @@ namespace SS.Template.Api
                         .WithExposedHeaders(HeaderNames.ContentDisposition)
                         .AllowAnyMethod()
                         .AllowCredentials()
-                        //.WithOrigins(corsConfig["Origins"].Split(','))
-                        .WithOrigins(Configuration["ClientDomain"]));
-
-            app.UseHttpsRedirection();
+                        .WithOrigins(Configuration["Origins"].Split(';')));
 
             app.UseRouting();
 
             app.UseAuthentication();
             app.UseAuthorization();
-
+           
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapControllers();
+                endpoints.MapHealthChecks("/health");
             });
         }
 
@@ -89,71 +81,40 @@ namespace SS.Template.Api
 
             services.AddHealthChecks();
 
-            AddIdentity(services);
             AddAuthentication(services, Configuration);
 
-            AddMvcCore(services, applicationAssembly);
             AddAppServices(services, applicationAssembly);
         }
 
         private static void AddAuthentication(IServiceCollection services, IConfiguration configuration)
         {
+            var key = configuration["KeycloakSigningKey"];
+            var apiKey = configuration["ApiKeySecret"];
             services
                 .AddAuthentication(options =>
                 {
-                    options.DefaultAuthenticateScheme = IdentityConstants.ApplicationScheme;
-                    options.DefaultChallengeScheme = IdentityConstants.ApplicationScheme;
-                    options.DefaultSignInScheme = IdentityConstants.ExternalScheme;
+                    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
                 })
-                .AddCookie(IdentityConstants.ApplicationScheme, options =>
+                .AddJwtBearer(options =>
                 {
-                    options.Cookie.Name = AuthConstants.CookieName;
-                    options.Events.OnRedirectToLogin = context =>
+                    options.TokenValidationParameters = new TokenValidationParameters
                     {
-                        context.Response.StatusCode = (int)HttpStatusCode.Unauthorized;
-                        return Task.CompletedTask;
-                    };
-
-                    options.Events.OnRedirectToAccessDenied = context =>
-                    {
-                        context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                        return Task.CompletedTask;
-                    };
-                    options.ForwardDefaultSelector = ctx =>
-                    {
-                        var authHeader = ctx.Request.Headers[HeaderNames.Authorization];
-                        if (authHeader.Count > 0)
-                        {
-                            return AuthConstants.BearerScheme;
-                        }
-                        return IdentityConstants.ApplicationScheme;
+                        RequireExpirationTime = true,
+                        RequireSignedTokens = true,
+                        RequireAudience = false,
+                        ValidateActor = false,
+                        ValidateAudience = false,
+                        ValidateIssuer = false,
+                        ValidateIssuerSigningKey = true,
+                        IssuerSigningKey = new X509SecurityKey(new X509Certificate2(Convert.FromBase64String(key)))
                     };
                 })
-                .AddScheme<SecretBearerAuthenticationOptions, SecretBearerAuthenticationHandler>(
-                    AuthConstants.BearerScheme, "Bearer",
-                    options =>
-                    {
-                        options.Secret = configuration["ApiSecret"];
-                        options.ClaimsIssuer = AuthConstants.BearerScheme;
-                    })
-                .AddCookie(IdentityConstants.ExternalScheme, o =>
-                {
-                    o.Cookie.Name = IdentityConstants.ExternalScheme;
-                    o.ExpireTimeSpan = TimeSpan.FromMinutes(5);
-                })
-                .AddCookie(IdentityConstants.TwoFactorRememberMeScheme, o =>
-                {
-                    o.Cookie.Name = IdentityConstants.TwoFactorRememberMeScheme;
-                    o.Events = new CookieAuthenticationEvents
-                    {
-                        OnValidatePrincipal = SecurityStampValidator.ValidateAsync<ITwoFactorSecurityStampValidator>
-                    };
-                })
-                .AddCookie(IdentityConstants.TwoFactorUserIdScheme, o =>
-                {
-                    o.Cookie.Name = IdentityConstants.TwoFactorUserIdScheme;
-                    o.ExpireTimeSpan = TimeSpan.FromMinutes(5);
-                });
+                .AddScheme<ApiKeyAuthenticationSchemeOptions, ApiKeyAuthenticationSchemeHandler>(
+                    "ApiKey",
+                    opts => opts.ApiKey = apiKey
+                );
+            services.AddAuthorization();
         }
 
         /// <summary>
@@ -182,62 +143,6 @@ namespace SS.Template.Api
             }
         }
 
-        private static void AddIdentity(IServiceCollection services)
-        {
-            services
-                .AddIdentityCore<User>(options =>
-                {
-                    options.User.RequireUniqueEmail = true;
-                    options.Password.RequiredLength = AuthConstants.MinPasswordLength;
-                    options.Password.RequireLowercase = true;
-                    options.Password.RequireUppercase = true;
-                    options.Password.RequireNonAlphanumeric = true;
-                    options.Password.RequireDigit = true;
-                })
-                .AddRoles<Role>()
-                .AddSignInManager()
-                .AddEntityFrameworkStores<AuthDbContext>()
-                .AddDefaultTokenProviders();
-        }
-
-        private static void AddMvcCore(IServiceCollection services, Assembly applicationAssembly)
-        {
-            services.Configure<ApiBehaviorOptions>(options =>
-            {
-                options.SuppressMapClientErrors = true;
-            });
-            services.Configure<RouteOptions>(options =>
-            {
-                options.LowercaseUrls = true;
-            });
-
-            services
-                .AddMvcCore(options =>
-                {
-                    options.Filters.Add(new ExceptionHandlerFilterAttribute());
-                    options.Filters.Add(new AuthorizeFilter(AuthConstants.DefaultPolicy));
-                })
-                .AddAuthorization(options =>
-                {
-                    options.AddPolicy(AuthConstants.BearerPolicy, builder => builder.AddAuthenticationSchemes(AuthConstants.BearerScheme)
-                        .RequireAuthenticatedUser());
-                    options.AddPolicy(AuthConstants.DefaultPolicy, builder => builder.RequireAuthenticatedUser());
-                    options.DefaultPolicy = options.GetPolicy(AuthConstants.DefaultPolicy);
-                })
-                .AddNewtonsoftJson(options =>
-                {
-                    options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
-                    options.SerializerSettings.MissingMemberHandling = MissingMemberHandling.Ignore;
-                    options.SerializerSettings.DateTimeZoneHandling = DateTimeZoneHandling.Utc;
-                })
-                .SetCompatibilityVersion(CompatibilityVersion.Version_3_0)
-                .AddFluentValidation(options =>
-                {
-                    options.RunDefaultMvcValidationAfterFluentValidationExecutes = false;
-                    options.RegisterValidatorsFromAssemblies(new[] { applicationAssembly, typeof(Startup).Assembly });
-                });
-        }
-
         private static bool IsClosedType(Type type, Type openGenericType)
         {
             return type.IsGenericType && type.GetGenericTypeDefinition() == openGenericType;
@@ -245,25 +150,15 @@ namespace SS.Template.Api
 
         private void AddAppServices(IServiceCollection services, Assembly applicationAssembly)
         {
-            services.AddScoped<IdentityInitializer>();
-            var useRowNumberForPaging = Configuration.GetValue<bool>("UseRowNumberForPaging");
-
-            void SqlServerOptionsAction(SqlServerDbContextOptionsBuilder b)
-            {
-                if (useRowNumberForPaging)
-                {
-                    b.UseRowNumberForPaging();
-                }
-            }
+            // Swagger
+            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            services.AddEndpointsApiExplorer();
+            services.AddSwaggerGen();
 
             // DbContext's
-            services.AddDbContext<AuthDbContext>(options =>
-            {
-                options.UseSqlServer(Configuration.GetConnectionString("AuthConnection"), SqlServerOptionsAction);
-            });
             services.AddDbContext<AppDbContext>(options =>
             {
-                options.UseSqlServer(Configuration.GetConnectionString("AppConnection"), SqlServerOptionsAction);
+                options.UseNpgsql(Configuration.GetConnectionString("Default"));
             });
             services.AddScoped<AppDbContextInitializer>();
 
@@ -271,10 +166,19 @@ namespace SS.Template.Api
             services.AddTransient<IRepository, EfRepository<AppDbContext>>();
             services.AddTransient<IReadOnlyRepository, ReadOnlyEfRepository<AppDbContext>>();
             services.AddSingleton<IPaginator, DefaultPaginator>();
+            services.AddSingleton<IFilterCriteria, FilterCriteria>();
+            //Proxys
+            services.AddHttpContextAccessor();
+            services.AddHttpClient<IJanusProxy, JanusBambooProxy>(client =>
+            {
+                client.DefaultRequestHeaders.Add("X-API-KEY", Configuration.GetValue<string>("ApiKeySecret"));
+            });
+
 
             // Infrastructure
-            services.AddSingleton<IDateTime>(new SystemDateTime(Configuration["TimeZone"]));
+            services.AddSingleton<IDateTime>(new SystemDateTime(Configuration["TZ"]));
             services.AddAutoMapper(AutoMapperConfig.Configure, applicationAssembly);
+            services.AddValidatorsFromAssembly(applicationAssembly);
 
             if (Environment.IsDevelopment())
             {
@@ -305,7 +209,7 @@ namespace SS.Template.Api
             // MediatR
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestPreProcessorBehavior<,>));
             services.AddTransient(typeof(IPipelineBehavior<,>), typeof(RequestValidationBehavior<,>));
-            services.AddMediatR(applicationAssembly);
+            services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(applicationAssembly));
 
             AddEditCommandValidators(services);
         }

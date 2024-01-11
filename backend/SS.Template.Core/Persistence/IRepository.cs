@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -40,5 +41,7 @@ namespace SS.Template.Core.Persistence
         /// <typeparam name="T">The entity type.</typeparam>
         /// <param name="entity">The entity.</param>
         T Update<T>(T entity) where T : class;
+        void AddRange<T>(IEnumerable<T> entities) where T : class;
+
     }
 }

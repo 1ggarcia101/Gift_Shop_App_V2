@@ -1,22 +1,33 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>net7.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <AssemblyName>SS.Template.Application</AssemblyName>
     <RootNamespace>SS.Template.Application</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AutoMapper" Version="8.1.0" />
-    <PackageReference Include="FluentValidation" Version="8.3.0" />
-    <PackageReference Include="MediatR" Version="6.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Options" Version="2.2.0" />
+    <PackageReference Include="AutoMapper" Version="12.0.1" />
+    <PackageReference Include="FluentValidation" Version="11.6.0" />
+    <PackageReference Include="MediatR" Version="12.1.1" />
+    <PackageReference Include="Microsoft.AspNetCore.StaticFiles" Version="2.2.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="7.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="7.0.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\SS.Artemis.Proxy\SS.Artemis.Proxy.csproj" />
     <ProjectReference Include="..\SS.Template.Core\SS.Template.Core.csproj" />
     <ProjectReference Include="..\SS.Template.Domain\SS.Template.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Features\DesirableSkills\Commands\Add\" />
+    <Folder Include="Features\JobDescription\Commands\Add\" />
+    <Folder Include="Features\SoftSkills\Commands\Add\" />
+    <Folder Include="Features\SpecificWorkExperienceRequirements\Commands\Add\" />
+    <Folder Include="Features\TechnicalKnowledge\Commands\Add\" />
+    <Folder Include="Features\TechSkills\Commands\Add\" />
   </ItemGroup>
 </Project>

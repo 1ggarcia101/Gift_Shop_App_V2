@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,16 @@ namespace SS.Template.Persistence
             Context.Entry(entity).State = EntityState.Modified;
 
             return result.Entity;
+        }
+        public virtual void AddRange<T>(IEnumerable<T> entities)
+        where T : class
+        {
+            if (entities == null)
+            {
+                throw new ArgumentNullException(nameof(entities));
+            }
+
+            Set<T>().AddRange(entities);
         }
 
         public virtual Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)

@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using SS.Template.Domain.Entities;
 using SS.Template.Domain.Model;
+using SS.Template.Persistence.Migrations;
 
 namespace SS.Template.Persistence
 {
@@ -14,6 +15,23 @@ namespace SS.Template.Persistence
         public DbSet<Example> Examples { get; set; }
 
         public DbSet<Customer> Customers { get; set; }
+        public DbSet<Interviewers> Interviewers { get; set; }
+
+        public DbSet<Position> Positions { get; set; }
+
+        public DbSet<DesirableSkill> DesirableSkills { get; set; }
+        
+        public DbSet<JobDescriptions> JobDescriptions { get; set; }
+
+        public DbSet<SoftSkill> SoftSkills { get; set; }
+
+        public DbSet<SpecificWorkExperienceRequirement> WorkExperienceRequirements { get; set; }
+
+        public DbSet<TechnicalKnowledges> TechnicalKnowledges { get; set; }
+
+        public DbSet<Interview> Interviews { get; set; }
+
+        public DbSet<TechSkill> TechSkills { get; set; }
 
         public AppDbContext(DbContextOptions<AppDbContext> options)
             : base(options)

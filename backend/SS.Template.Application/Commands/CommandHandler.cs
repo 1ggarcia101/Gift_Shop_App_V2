@@ -9,10 +9,10 @@ namespace SS.Template.Application.Commands
     {
         protected abstract Task Handle(TCommand command, CancellationToken cancellationToken);
 
-        async Task<Unit> IRequestHandler<TCommand, Unit>.Handle(TCommand request, CancellationToken cancellationToken)
+        async Task IRequestHandler<TCommand>.Handle(TCommand request, CancellationToken cancellationToken)
         {
             await Handle(request, cancellationToken);
-            return Unit.Value;
+            return;
         }
     }
 }

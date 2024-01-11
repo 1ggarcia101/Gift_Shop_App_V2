@@ -47,7 +47,7 @@ namespace SS.Template.Infrastructure
             image.Save(output, _encoder);
         }
 
-        private static double CalculateRatio(IImageInfo image, int maxWidth, int maxHeight)
+        private static double CalculateRatio(Image image, int maxWidth, int maxHeight)
         {
             double widthRatio = 1;
             double heightRatio = 1;

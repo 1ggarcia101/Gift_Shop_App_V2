@@ -27,7 +27,8 @@ namespace SS.Template.Core.Persistence
             where T : class;
 
         #region Async Methods
-
+        T First<T>(IQueryable<T> query);
+        T First<T>(IQueryable<T> query, Expression<Func<T, bool>> predicate);
         Task<T> SingleAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default);
 
         Task<T> FirstAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default);

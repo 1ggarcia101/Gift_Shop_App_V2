@@ -1,9 +1,10 @@
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using SS.Template.Api.Identity;
+using SS.Template.Persistence;
 
 namespace SS.Template.Api
 {
@@ -14,10 +15,10 @@ namespace SS.Template.Api
             var host = CreateHostBuilder(args).Build();
             using (var scope = host.Services.CreateScope())
             {
-                var identityInitializer = scope.ServiceProvider.GetRequiredService<IdentityInitializer>();
-                var config = scope.ServiceProvider.GetRequiredService<IConfiguration>();
+                var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
-                await identityInitializer.Run(config["AdminEmail"]);
+                // Here is the migration executed
+                dbContext.Database.Migrate();
             }
 
             await host.RunAsync();

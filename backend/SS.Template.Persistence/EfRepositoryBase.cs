@@ -69,7 +69,24 @@ namespace SS.Template.Persistence
         }
 
         #region Async methods
+        public T First<T>(IQueryable<T> query)
+        {
+            if (query == null)
+            {
+                throw new ArgumentNullException(nameof(query));
+            }
 
+            return query.FirstOrDefault();
+        }
+        public T First<T>(IQueryable<T> query, Expression<Func<T, bool>> predicate)
+        {
+            if (query == null)
+            {
+                throw new ArgumentNullException(nameof(query));
+            }
+
+            return query.FirstOrDefault(predicate);
+        }
         public Task<T> FirstAsync<T>(IQueryable<T> query, CancellationToken cancellationToken = default)
         {
             if (query == null)

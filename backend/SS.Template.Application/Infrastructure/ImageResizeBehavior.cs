@@ -7,6 +7,7 @@ using SS.Template.Core;
 namespace SS.Template.Application.Infrastructure
 {
     public sealed class ImageResizeBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
+        where TRequest : IRequest<TResponse>
     {
         private readonly IImageResizer _imageResizer;
         private readonly PictureSettings _pictureSettings;
@@ -17,7 +18,7 @@ namespace SS.Template.Application.Infrastructure
             _pictureSettings = pictureSettings;
         }
 
-        public async Task<TResponse> Handle(TRequest request, CancellationToken cancellationToken, RequestHandlerDelegate<TResponse> next)
+        public async Task<TResponse> Handle(TRequest request, RequestHandlerDelegate<TResponse> next, CancellationToken cancellationToken)
         {
             if (request is IPictureCommand<TResponse> pictureCommand)
             {
